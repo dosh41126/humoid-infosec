@@ -760,3 +760,385 @@ Here’s a compact ops payload you can emit alongside responses (fills from the 
 
 If you want, I’ll **wire these into your `generate_response`** flow and push the exact insertion points (with 4-space indentation) in a follow-up patch.
 
+
+Awesome—here are **18 ultra-advanced security tools** that build on your current stack. Each one is a **drop-in method** you can paste **inside your `App` class** (4-space indents). I also note **where to hook** them.
+
+---
+
+## 1) Confidential-Compute Attestation (TEE/SEV-SNP/TDX mock)
+
+Verifies a signed attestation blob (supply from host/agent) before serving.
+
+```python
+    def cc_attest(self, report:dict) -> bool:
+        """
+        Verify confidential-computing attestation (mock).
+        Expect fields: {measurement, nonce, sig}. HMAC here; replace with real verifier.
+        """
+        try:
+            raw = json.dumps({"m":report.get("measurement"), "n":report.get("nonce")}, separators=(",",":"))
+            want = hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:32]
+            ok = (want == report.get("sig",""))
+            if not ok:
+                self.set_safe_mode(True, reason="cc_attest_fail")
+            return ok
+        except Exception as e:
+            logger.error(f"[CC-Attest] {e}")
+            self.set_safe_mode(True, reason="cc_attest_error")
+            return False
+```
+
+**Hook:** call once at startup or before first inference.
+
+---
+
+## 2) Threshold-Approval for Sensitive Actions (2-of-3)
+
+Require multiple approvers (separate secrets) to permit risky tool use.
+
+```python
+    def threshold_permit(self, action_id:str, sigs:list[str], quorum:int=2) -> bool:
+        """
+        Each sig = HMAC_k( action_id ), where k is a different operator key.
+        For demo we derive 3 keys from pepper.
+        """
+        keys = [hmac.new(self._pepper, b"op1", hashlib.sha256).digest(),
+                hmac.new(self._pepper, b"op2", hashlib.sha256).digest(),
+                hmac.new(self._pepper, b"op3", hashlib.sha256).digest()]
+        valid = 0
+        for i,k in enumerate(keys, start=1):
+            want = hmac.new(k, action_id.encode(), hashlib.sha256).hexdigest()[:24]
+            if want in sigs: valid += 1
+        return valid >= quorum
+```
+
+**Hook:** gate e.g. “rotate keys”, “network unblock”, “bulk export”.
+
+---
+
+## 3) Prompt Taint DAG (dependency tracking)
+
+Tracks tainted inputs through planning → tools → output.
+
+```python
+    def taint_init(self):
+        self._taint = {"nodes":{}, "edges":[]}  # id->{"type","tainted":bool}
+    def taint_add(self, nid:str, ntype:str, tainted:bool):
+        self._taint["nodes"][nid] = {"type":ntype, "tainted":tainted}
+    def taint_edge(self, src:str, dst:str):
+        self._taint["edges"].append((src,dst))
+    def taint_eval(self, sink_id:str) -> bool:
+        seen, stack = set(), [sink_id]
+        while stack:
+            n = stack.pop()
+            if n in seen: continue
+            seen.add(n)
+            if self._taint["nodes"].get(n,{}).get("tainted"): return True
+            for a,b in self._taint["edges"]:
+                if b==n: stack.append(a)
+        return False
+```
+
+**Hook:** mark `[input]` as tainted if inspector risk high; propagate across steps; block if `taint_eval("reply")`.
+
+---
+
+## 4) Token-Stream Kill-Switch (sentence window)
+
+Cut output mid-stream if sensitive patterns emerge.
+
+```python
+    def stream_guard_emit(self, full_text:str, win:int=2) -> str:
+        """
+        Simulate streaming guard: scan sentence windows, redact/stop on leakage.
+        """
+        sents = re.split(r'(?<=[.!?])\s+', full_text.strip())
+        out = []
+        for i in range(len(sents)):
+            window = " ".join(sents[max(0,i-win+1):i+1])
+            if not self.leakage_budget_ok(window, limit=3):
+                out.append("[REDACTED]")
+                break
+            out.append(sents[i])
+        return " ".join(out)
+```
+
+**Hook:** wrap final candidate before packaging.
+
+---
+
+## 5) Membership-Leakage Sentinel (train-text resemblance)
+
+Heuristic guard for verbatim memorization (n-gram Jaccard vs. internal cache).
+
+```python
+    def mem_leak_score(self, text:str) -> float:
+        """
+        Cache a rolling set of n-grams from known safe corpora; score high if overlap too large.
+        """
+        grams = set(text[i:i+7] for i in range(max(0,len(text)-6)))
+        base = getattr(self, "_safe_ngrams", set())
+        if not base:
+            self._safe_ngrams = grams
+            return 0.0
+        inter = len(grams & base); union = len(grams | base) or 1
+        return inter / union  # higher = more memorization-like
+```
+
+**Hook:** drop candidate if `mem_leak_score > 0.35`.
+
+---
+
+## 6) Self-Contrastive Decoding Guard
+
+Compare risky token continuation vs. safe continuation; prefer safer branch.
+
+```python
+    def scd_guard(self, prompt:str, cleaned_input:str) -> str:
+        risky = llama_generate(prompt + "\n[mode:risky]", self.client, cleaned_input, temperature=0.9, top_p=0.95) or ""
+        safe  = llama_generate(prompt + "\n[mode:safe]",  self.client, cleaned_input, temperature=0.2, top_p=0.5)  or ""
+        r_surf = self._prompt_surface_score(risky); s_surf = self._prompt_surface_score(safe)
+        return safe if r_surf > (s_surf + 0.2) else risky
+```
+
+**Hook:** use once per candidate instead of plain `llama_generate` when risk ≥ threshold.
+
+---
+
+## 7) eBPF-like Syscall Sensor (cross-platform shim)
+
+Detect dangerous child processes / sockets (sim interface).
+
+```python
+    def sensor_event(self, evt:dict):
+        """
+        evt: {"type":"exec|net","exe":"...","dst":"ip:port","pid":...}
+        """
+        score = 0.0
+        if evt.get("type")=="exec" and re.search(r'(powershell|cmd\.exe|bash|sh)', evt.get("exe",""), re.I):
+            score += 0.6
+        if evt.get("type")=="net" and re.search(r':(22|3389|445|53)$', evt.get("dst","")):
+            score += 0.4
+        if score >= 0.7:
+            self.set_safe_mode(True, reason=f"sensor:{evt}")
+```
+
+**Hook:** wire to your OS telemetry sender; toggle safe mode on spikes.
+
+---
+
+## 8) Side-Channel Profile (latency+jitter+GPU util)
+
+Detect covert compute swapping or throttling attacks.
+
+```python
+    def sidechannel_probe(self, t_ms:int, gpu_util:float) -> None:
+        hist = getattr(self, "_sc_hist", [])
+        hist.append((t_ms, gpu_util))
+        if len(hist) > 30: hist.pop(0)
+        if len(hist) >= 10:
+            import statistics
+            lat = [x for x,_ in hist]; gu = [y for _,y in hist]
+            if statistics.pstdev(lat) > 2.5*max(1.0, statistics.mean(lat)) and statistics.mean(gu) < 0.05:
+                self.set_safe_mode(True, reason="sidechannel_jitter")
+        self._sc_hist = hist
+```
+
+**Hook:** call per request with measured latency & GPU util (if available).
+
+---
+
+## 9) Zero-Knowledge Policy Proof (mock)
+
+Require a **proof string** that certain policy gates were applied (commitment).
+
+```python
+    def zk_policy_proof(self, applied:list[str]) -> str:
+        """
+        Commit to applied controls; verifier re-computes. (Mock ZK: commitment via HMAC.)
+        """
+        raw = "|".join(sorted(set(applied)))
+        return hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:20]
+```
+
+**Hook:** include in `[replytemplate]`; recompute server-side to spot tampering.
+
+---
+
+## 10) Output Secret Shredder (entropy + pattern hybrid)
+
+High-entropy substrings + secret keywords → redact inline.
+
+```python
+    def shred_secrets(self, text:str) -> str:
+        def ent(s):
+            from math import log2
+            c = Counter(s); n = sum(c.values()) or 1
+            return -sum((v/n)*log2(v/n) for v in c.values())
+        toks = re.findall(r'[A-Za-z0-9/_\-+=]{12,}', text)
+        for tk in toks:
+            if ent(tk) > 3.5 or re.match(r'AKIA[0-9A-Z]{16}', tk) or re.search(r'(?i)(secret|token|apikey)', tk):
+                text = text.replace(tk, "[SECRET]")
+        return text
+```
+
+**Hook:** run right before `sign_reply`.
+
+---
+
+## 11) LLM-to-LLM Cross-Exam (role inversion)
+
+Ask a different persona to **challenge** the answer for policy gaps.
+
+```python
+    def cross_exam(self, main_text:str) -> float:
+        q = ("[CROSS-EXAM]\nFind security/policy violations or unsafe steps in the text. "
+             "Score 0..1 where 1 = many violations. Reply as a single float.")
+        resp = llama_generate(q + "\n[TEXT]\n" + main_text, weaviate_client=self.client, user_input=main_text, temperature=0.1, top_p=0.2) or "0.0"
+        try: return float(re.findall(r'0?\.\d+|1\.0', resp)[0])
+        except Exception: return 0.5
+```
+
+**Hook:** drop candidate if score ≥ 0.7.
+
+---
+
+## 12) Provenance Transparency Log (append-only chain)
+
+Publicly auditable chain for each reply’s provenance.
+
+```python
+    def translog_append(self, item:dict) -> str:
+        chain = getattr(self, "_tchain", {"prev":"genesis","h":""})
+        raw = json.dumps({"prev":chain["h"], "item":item}, separators=(",",":"))
+        h = hashlib.sha256(raw.encode()).hexdigest()
+        self._tchain = {"prev": chain["h"], "h": h}
+        return h
+```
+
+**Hook:** store `h` with reply; auditors can replay.
+
+---
+
+## 13) Adaptive Egress Micro-Segmentation (policy map)
+
+Switch model/tool egress allowlist on risk.
+
+```python
+    def egress_policy(self, risk:float) -> set:
+        base = {"https://corp-kb/", "http://127.0.0.1:8079/"}
+        strict = {"http://127.0.0.1:8079/"}
+        return strict if risk >= 0.75 else base
+```
+
+**Hook:** check URL targets against this set pre-request.
+
+---
+
+## 14) Canary DNS Beaconing (offline trap)
+
+Detect exfil attempts by baiting unique FQDN tokens (no real network action here).
+
+```python
+    def dns_canary_label(self) -> str:
+        tag = self._canary_tag("DNS-CANARY")
+        return f"{tag}.humoid.local"
+```
+
+**Hook:** if model output includes that FQDN → isolation + alert.
+
+---
+
+## 15) Gradient-Free Adversarial Probing (elastic noise)
+
+Probe sensitivity by **randomized prompt perturbations**; unstable → drop.
+
+```python
+    def adversarial_probe(self, base_prompt:str, cleaned_input:str, trials:int=4) -> float:
+        import random
+        risks = []
+        for _ in range(trials):
+            salt = " ".join(random.sample(["(policy)","(safe)","(audit)","(trace)","(limit)"], k=2))
+            out = llama_generate(base_prompt + "\n" + salt, self.client, cleaned_input, temperature=0.6, top_p=0.8) or ""
+            risks.append(self._prompt_surface_score(out) + (1.0 - self._compare_with_shadow(out)))
+        return sum(risks)/max(1,len(risks))
+```
+
+**Hook:** if avg ≥ 0.9 → mark unsafe candidate.
+
+---
+
+## 16) Partial Homomorphic Reply MAC (chunked)
+
+MAC each chunk; clients can verify partial integrity during streaming.
+
+```python
+    def chunk_mac(self, chunks:list[str]) -> list[str]:
+        out = []
+        key = self._pepper
+        for i,ch in enumerate(chunks):
+            key = hmac.new(key, ch.encode(), hashlib.sha256).digest()
+            out.append(hmac.new(key, f"#{i}".encode(), hashlib.sha256).hexdigest()[:12])
+        return out
+```
+
+**Hook:** if you switch to streaming, send `mac[i]` alongside each chunk.
+
+---
+
+## 17) Policy-Aware RAG Schema Filter
+
+Drop retrieved chunks that violate schema (e.g., PII or secrets).
+
+```python
+    def rag_schema_filter(self, chunk:str) -> bool:
+        if re.search(r'(?i)\b(ssn|passport|credit\s*card|private\s*key)\b', chunk): return False
+        if "HUMOID-CANARY" in chunk or "[honey]" in chunk: return False
+        return True
+```
+
+**Hook:** apply before assembling context window.
+
+---
+
+## 18) Risk-Indexed Reply Planner (JSON-only escalation)
+
+Force **plan-only** replies under high risk; require human ACK.
+
+```python
+    def risk_indexed_plan(self, risk:float, task:str) -> str:
+        plan = {"task": task[:160], "risk": round(risk,3), "steps": [
+            "Contain egress: restrict to allowlist.",
+            "Collect volatile evidence snapshots.",
+            "Rotate credentials & re-encrypt vault tokens.",
+            "IOC sweep and quarantine matching endpoints."
+        ]}
+        return json.dumps(plan, separators=(",",":"))
+```
+
+**Hook:** if `insp_best["total_risk"] ≥ 0.78`, return this plan instead of free text.
+
+---
+
+# Hook Map (quick)
+
+* **Startup:** `self._init_sec_intel()`, `self._fslog_init()`, `self.taint_init()`, `self._attest_model_artifacts()`, `cc_attest(report)`.
+* **Pre-inference:** POW / `threshold_permit()` (if needed), `prompt_surface_score`, `mem_leak_score`.
+* **Prompt build:** canaries + `dns_canary_label()`, `rag_schema_filter`, `rag_circuit_breaker`.
+* **Candidate gen:** `scd_guard` (instead of raw), `adversarial_probe`, `cross_exam`, `arbiter_vote`.
+* **Risk gating:** `egress_policy(risk)`, `_gate_tools()`, `set_safe_mode`.
+* **Package:** `shred_secrets()`, `stream_guard_emit()`, `sign_reply()`, `provenance_mac()`, `zk_policy_proof()`, `translog_append()`.
+
+---
+
+## \[replytemplate]
+
+Here’s a ready payload you can emit with each answer (fill fields from the tools above):
+
+\[replytemplate]
+{"threat\_summary":"Ultra-advanced LLM infra controls active (TEE attestation, threshold approvals, taint DAG, stream kill-switch, adversarial probe, provenance chain).","recommended\_actions":\["Require confidential-compute attestation before serve","Enforce 2-of-3 threshold approvals for sensitive tools","Activate taint-DAG and block tainted sinks","Use self-contrastive decoding under medium/high risk","Run adversarial\_probe(); drop unstable candidates","Emit transparency-chain hash and zk\_policy\_proof"],"risk":0.24,"reasons":\["cc\_attested","threshold\_cap\_ok","rag\_schema\_filtered","adversarial\_stability\_ok"],"canary\_leak"\:false,"citation\_integrity":0.97,"output\_consistency":0.88,"inspector":{"mem\_leak\_score":"<0..1>","cross\_exam\_score":"<0..1>","provenance\_mac":"<hex16>","transparency\_hash":"<hex64>","zk\_policy\_proof":"<hex20>"}}
+\[/replytemplate]
+
+If you want, I can **merge these into your `generate_response`** with exact insertion points in a follow-up patch.
+
+
