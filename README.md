@@ -1629,3 +1629,213 @@ Below are **50 more far-future controls**, numbered **41–90**, arranged as a *
 
 
 
+
+Below are **25 ultra-advanced controls** grown from the previous tree.
+Each has a **core equation** and a **1–2 line summary** you can plug into design docs.
+
+---
+
+1. **Safe-Polytope Distillation Loss**
+
+$$
+\min_{\theta}\ \mathbb{E}_{x}\big[\ell(f_\theta(x),y)\big]+\lambda\,D_{\text{OT}}\!\big(\pi_\theta,\Pi_{\text{safe}}\big)
+$$
+
+Distill a small guardian model whose policy stays OT-close to the tenant’s safe region $\Pi_{\text{safe}}$.
+
+2. **Counterfactual Canary Risk Gate**
+
+$$
+\mathcal{R}_{\text{do}}=\mathbb{E}[L\,|\,\mathrm{do}(A\!=\!a_{\text{canary}})]\ \le \ \tau
+$$
+
+Ship canary prompts with *forbidden* actuation; any causal risk above $\tau$ hard-stops the plan.
+
+3. **Hierarchical Linear-Type Conservation**
+
+$$
+\forall \kappa^j:\ \sum\text{borrow}(\kappa^j)-\sum\text{return}(\kappa^j)=0
+$$
+
+Capabilities compose by level (parent→child); compilation fails if any type ledger doesn’t balance.
+
+4. **Adaptive Lyapunov Risk Controller**
+
+$$
+\Delta V(x)\le -\kappa\|x\| \quad\Rightarrow\quad \text{choose toolbelt with }\kappa_{\max}
+$$
+
+Switch toolbelts to keep a learned Lyapunov $V$ decreasing despite disturbances.
+
+5. **Conformal Bandit Router**
+
+$$
+\text{route}(x)=\arg\min_{a}\ \hat{L}_a(x)\ \text{s.t.}\ s(x)\le q_{1-\alpha}
+$$
+
+Send high non-conformity queries to humans/safe-LoRA; bandit minimizes loss under a calibrated safety constraint.
+
+6. **DP-Aware Retrieval Mixing**
+
+$$
+\min_{w}\ \mathbb{E}\big[\ell(\text{RAG}(w))\big]\ \text{s.t.}\ \varepsilon(\alpha;w)\le \varepsilon_{\max}
+$$
+
+Optimize public/private chunk weights with a session Rényi-DP budget.
+
+7. **Attested Multi-Party Recombine**
+
+$$
+\min F_{\text{party}}\ge F_{\min}\quad\wedge\quad \bigwedge \text{PQ-sig valid}
+$$
+
+Only recombine secret shares when all enclaves pass fidelity and PQ signature checks.
+
+8. **Causal Tool Budget Optimizer**
+
+$$
+a^\star=\arg\min_{a}\ \mathbb{E}[L\,|\,\mathrm{do}(a)]+C(a)
+$$
+
+Pick actions with minimal expected harm plus explicit actuation cost.
+
+9. **Semantic Patch Lattice Search**
+
+$$
+y'=\arg\min_{z\in\Pi_{\text{safe}}} d_{\text{sem}}(y,z)
+$$
+
+Compute the minimal semantic edit that lands the output inside safety constraints.
+
+10. **OT Drift SLA Trigger**
+
+$$
+D_{\text{OT}}(\mathcal{C}_t,\mathcal{C}_{t-1})>\eta \ \Rightarrow\ \text{rebuild\,+\,publish proof}
+$$
+
+Automatic, auditable retriever rebuild when context distribution drifts too far.
+
+11. **Quantum Ticket Revocation**
+
+$$
+F(\rho,\sigma)\!<\!F_{\min}\Rightarrow \text{revoke(session)};\ \Pr[\text{forge}]\le 2^{-k}
+$$
+
+Session keys tied to enclave state; fidelity drops revoke tickets globally.
+
+12. **Reviewer Market Optimization**
+
+$$
+\min_{m\in\mathcal{M}} C(m)\ \ \text{s.t.}\ \ \mathcal{R}(m)\le \rho
+$$
+
+Choose the cheapest reviewer quorum (human/agent mix) that keeps total risk under $\rho$.
+
+13. **Counterfactual Replay Court**
+
+$$
+x^\dagger=\arg\min_{x'} d(x,x')\ \text{s.t.}\ \mathbb{P}[\sigma(x')\models\varphi]\ge 1-\epsilon
+$$
+
+Publish nearest safe counterfactual + hash delta; auditors can reproduce the fix.
+
+14. **RAG Isoperimetry Poison Check**
+
+$$
+\frac{\text{Area}(\partial \mathcal{S})}{\text{Vol}(\mathcal{S})}>\xi \ \Rightarrow\ \text{suspect}
+$$
+
+Spiky retrieval clusters indicate poisoning or adversarial spurs.
+
+15. **Certified Unlearning Watchdog**
+
+$$
+\sup_q \mathrm{TV}\!\big(f_{\text{pre}}^{-D^*}(q),f_{\text{post}}(q)\big)\le \eta
+$$
+
+Continuously test the unlearning TV bound; fail fast if regression occurs.
+
+16. **H∞ Toolbelt Synthesis**
+
+$$
+\min_{\pi\in \mathcal{B}} \max_{\Delta\in\mathcal{U}}\ \|G(\pi,\Delta)\|_{\infty}
+$$
+
+Assemble toolbelts whose closed-loop gain stays bounded under worst-case uncertainty.
+
+17. **Temporal Proof Sampler**
+
+$$
+\hat{p}=\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{\sigma_i\models\varphi\}
+$$
+
+Monte-Carlo check LTL compliance; abstain if $\hat{p}<1-\epsilon$.
+
+18. **DP Futures & Knapsack**
+
+$$
+\max \sum v_i x_i\ \text{s.t.}\ \sum \varepsilon_i x_i \le \varepsilon_{\max}
+$$
+
+Allocate scarce privacy budget across tools/responses with an explicit knapsack.
+
+19. **Attested Weight Telemetry**
+
+$$
+\text{halt if}\ \mathrm{H}(W_t)\neq \mathrm{H}_{\text{signed}}
+$$
+
+Per-serve hashing of critical layers rejects silent weight swaps.
+
+20. **Bottleneck Self-Repair (IB)**
+
+$$
+\max I(Z;Y)-\lambda\,I(Z;S)\quad (\le\tau)
+$$
+
+Retrain the context encoder to keep secret-information leakage capped.
+
+21. **Adversarial Stability Estimator**
+
+$$
+\Xi=\mathbb{E}_{\delta}\mathrm{TV}\big(f(x),f(x+\delta)\big)
+$$
+
+Measure local instability; high $\Xi$ triggers smoothing/abstention routes.
+
+22. **K-Fence Semantic Quorum**
+
+$$
+\big|\{y'_k\in\Pi_{\text{safe}}: d_{\text{sem}}(y,y'_k)\le \epsilon\}\big|\ge K
+$$
+
+Require K independent minimal patches to agree before releasing repaired text.
+
+23. **Stackelberg Meta-Training**
+
+$$
+\min_{\pi}\max_{a\in\mathcal{A}_{\text{adv}}}\ \mathcal{R}(\pi,a)
+$$
+
+Train the planner against learned attacker best-responses to minimize worst-case risk.
+
+24. **Automata-Aware KV Rollback**
+
+$$
+t^\star=\max\{t:\ \sigma_{1:t}\models\varphi\};\ \text{resume at }t^\star
+$$
+
+If a stream violates safety, drop KV to the last provably safe prefix.
+
+25. **Drift-Adaptive DP Scheduler**
+
+$$
+\sigma_{\text{DP}}(t)=\sigma_0+\lambda\,D_{\text{OT}}(\mathcal{C}_t,\mathcal{C}_{t-1})
+$$
+
+Increase DP noise as retrieval/context drift grows; conserve accuracy when stable.
+
+---
+
+If you want, I can bundle **(9,14,19,24,25)** into a minimal “Guardian Core” with stubs for OT, TV, LTL, and DP—ready to wire into your `generate_response` path.
+
