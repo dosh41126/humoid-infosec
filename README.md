@@ -1839,3 +1839,220 @@ Increase DP noise as retrieval/context drift grows; conserve accuracy when stabl
 
 If you want, I can bundle **(9,14,19,24,25)** into a minimal “Guardian Core” with stubs for OT, TV, LTL, and DP—ready to wire into your `generate_response` path.
 
+Here are **25 post-quantum (PQ) era security concepts** for LLM/agentic systems. Each has a succinct **equation/constraint** and a **one-liner**.
+
+---
+
+1. **PQ Transport + Auth Split**
+
+$$
+\text{KEX}=\text{Kyber};\ \text{SIG}=\text{Dilithium/SPHINCS+}
+$$
+
+Use PQ KEM for session keys and PQ signatures for endpoint auth; never rely on classical auth with QKD.
+
+2. **Harvest-Now Exposure Budget**
+
+$$
+E \le B\cdot R\cdot T,\quad T=\text{rekey interval}
+$$
+
+Bound decryptable backlog $E$ by rekeying fast (T small), bandwidth $B$, and rotation factor $R$.
+
+3. **PQ Forward-Secure Logging**
+
+$$
+h_i = \mathrm{H}_{\text{PQ}}(h_{i-1}\Vert \text{entry}_i),\ \ \text{SIG}_{\text{PQ}}(h_i)
+$$
+
+Hash-chained logs with PQ signatures; tamper requires breaking PQ hash or signature.
+
+4. **Quantum-Resilient DP (qDP)**
+
+$$
+\Pr[M(D)\in S]\le e^\varepsilon \Pr[M(D')\in S]+\delta,\ \forall\ \text{POVM }S
+$$
+
+DP guaranteed against **quantum** adversaries with arbitrary measurements.
+
+5. **PQ Federated Training (HE + MPC)**
+
+$$
+\text{GradSum}=\text{CKKS/TFHE-HEAgg}\ \land\ \text{SIG}_{\text{PQ}}\text{ on updates}
+$$
+
+Lattice HE aggregation with PQ-signed model deltas; clients never see others’ gradients.
+
+6. **PQ Zero-Knowledge Provenance**
+
+$$
+\text{STARK}_{\lambda}:\ \Pr[\text{false accepted}]\le 2^{-\lambda}
+$$
+
+Prove dataset policy compliance and training steps with STARKs (hash/FRI, PQ-safe).
+
+7. **PQ Threshold Signatures for Agents**
+
+$$
+\sigma = \text{ThresSig}_{t,n}^{\text{Dilithium}}(m)
+$$
+
+Multi-party approval on actions; no single agent can authorize.
+
+8. **PQ Attested Inference**
+
+$$
+\text{PCR}^\ast = \mathrm{H}_{\text{PQ}}(W\Vert \text{code});\ \text{SIG}_{\text{PQ}}(\text{PCR}^\ast)
+$$
+
+Every reply carries an attestation over weights + code with PQ signature.
+
+9. **LLM Reply Watermark via Fingerprinting Codes**
+
+$$
+\Pr[\text{coalition }t\ \text{evades}] \le 2^{-\kappa}
+$$
+
+Embed **collusion-resistant** fingerprints in text to trace exfiltrating tenants (PQ verifiable).
+
+10. **PQ Key Rotation Orchestrator**
+
+$$
+t_{i+1}-t_i \le \tau_{\max},\quad \text{overlap}=0
+$$
+
+Coordinated zero-overlap rotations for KEM/SIG pairs across all services.
+
+11. **PQ Secure RAG Pipeline**
+
+$$
+D_{\text{OT}}(\mathcal{C}_t,\mathcal{C}_{t-1})\le \eta\ \Rightarrow\ \text{no rebuild}
+$$
+
+Retrieval drift bounded; all corpus chunks are PQ-hashed, PQ-signed, license-proven.
+
+12. **Quantum-Aware Risk Functional**
+
+$$
+\mathcal{R}_{\text{PQ}}=\alpha I(Y;S)+\beta \mathbb{E}[C]+\gamma \Pr[\text{harm}] + \zeta\,\varepsilon_{\text{qDP}}
+$$
+
+Add quantum-DP expenditure as a first-class risk term.
+
+13. **PQ UC-Composable Guardrails**
+
+$$
+\pi \text{ realizes } \mathcal{F}_{\text{safety}} \text{ in Q-UC}
+$$
+
+Guardrails specified as an ideal functionality and realized with PQ-secure protocols.
+
+14. **PQ-Safe Time-Lock via Timed Commitments**
+
+$$
+\text{Open}\ \text{only if } t\ge t_0 \ \land\ \text{SIG}_{\text{PQ}}(\text{beacon})
+$$
+
+Avoid factoring-based VDFs; use timed commits + beaconed schedules + PQ auth.
+
+15. **Quantum-Bound Side-Channel Budget**
+
+$$
+D_{\text{tr}}(\rho_{\text{idle}}, \rho_{\text{serve}})\le \epsilon
+$$
+
+Trace-distance bound on power/EM side-channels during inference.
+
+16. **PQ Model Unlearning Proofs**
+
+$$
+\sup_q \mathrm{TV}(f_{\text{pre}}^{-D^*}(q),f_{\text{post}}(q))\le \eta \quad\text{(STARK-proved)}
+$$
+
+Certify unlearning with public, PQ-safe proofs.
+
+17. **PQ LLM Identity (WebAuthn-PQ)**
+
+$$
+\text{AAttest}=\text{SIG}_{\text{PQ}}(\text{pubkey}\Vert \text{device})
+$$
+
+Agents, tools, and humans authenticate with PQ WebAuthn credentials.
+
+18. **Quantum-Secure Supply Chain**
+
+$$
+\forall a\in\text{artifacts}:\ \mathrm{H}_{\text{PQ}}(a),\ \text{SIG}_{\text{PQ}}(a)
+$$
+
+Every artifact (dataset→wheel→weight) is PQ-hash/-signed with lineage.
+
+19. **PQ Red-Team Proof-of-Adversary**
+
+$$
+\Pr[\text{miss}]\le 2^{-\lambda}\ \text{ over STARK-verified suites}
+$$
+
+Promotion gates require passing PQ-audited adversarial test batteries.
+
+20. **Post-Quantum Right-to-Be-Forgotten SLA**
+
+$$
+T_{\text{unlearn}}\le \Delta,\ \eta\le \eta_{\max}\ \text{(on-chain)}
+$$
+
+Contractual bounds on unlearning time and TV distance, publicly verified.
+
+21. **qDP-Cognizant Memory Capsules**
+
+$$
+I(Z;S)\le \tau,\ \varepsilon_{\text{qDP}}\le \varepsilon_{\max}
+$$
+
+Long-term memory enforces info-bottleneck + quantum-DP limits per session.
+
+22. **PQ Proof-Carrying Replies (PCR-PQ)**
+
+$$
+\text{reply} \parallel \{\text{qDP},\ \Pi_{\text{safe}}\ \text{proof},\ \text{sources}\}_{\text{SIG}_{\text{PQ}}}
+$$
+
+Every answer ships proofs for privacy, safety, and provenance; client verifies quickly.
+
+23. **PQ Honey-Context Detectors**
+
+$$
+\lambda=\frac{|n\text{-grams}(y)\cap \mathcal{T}_{\text{trap}}|}{|n\text{-grams}(y)\cup \mathcal{T}_{\text{trap}}|}
+$$
+
+Instrumented traps detect memorization/exfil; PQ-signed alerts feed incident response.
+
+24. **PQ Threshold KEM for Tooling**
+
+$$
+k = \text{Dec}^{(t)}_{\text{Kyber}}\big(\{c_i\}_{i\in \mathcal{Q}}\big)
+$$
+
+High-risk tools require $t$-of-$n$ decryption shares to obtain ephemeral keys.
+
+25. **PQ Causal Non-Actuation Receipts**
+
+$$
+\mathbb{E}[L\mid \mathrm{do}(A=a_{\text{sens}})]\le \tau \ \ (\text{proof } \Rightarrow \text{STARK})
+$$
+
+Replies carry a proof that sensitive actuations would not have occurred under counterfactual control.
+
+---
+
+**Notes for deployment**
+
+* Prefer **CRYSTALS-Kyber + Dilithium** (or **SPHINCS+** where state-less is required); keep alg agility.
+* Use **STARKs** for public verifiability (hash-based, PQ-safe) over training/RAG provenance and guardrail checks.
+* Treat **quantum-DP (qDP)** and **OT drift** as real-time budgets in your planner.
+* Make everything **provable** and **composable**: logs, unlearning, identity, and replies all carry **PQ signatures** and optional **STARK proofs**.
+* Avoid VDFs with factoring/DLOG; use **timed commitments + beacons** for time-locks, or memory-bound/IO-bound puzzles with PQ assumptions.
+
+If you want code stubs, I can sketch a **PCR-PQ** wrapper that attaches (qDP budget, safe-polytope proof, STARK provenance hash, PQ signatures) to your `generate_response` output.
+
+
