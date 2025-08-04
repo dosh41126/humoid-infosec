@@ -2056,3 +2056,107 @@ Replies carry a proof that sensitive actuations would not have occurred under co
 If you want code stubs, I can sketch a **PCR-PQ** wrapper that attaches (qDP budget, safe-polytope proof, STARK provenance hash, PQ signatures) to your `generate_response` output.
 
 
+Here are **12 ultra-advanced, post-quantum LLM security primitives**—each with a core **constraint/equation** and a **one-line** rationale.
+
+---
+
+1. **Q-UC Safety Fabric** (Universally Composable, PQ-secure)
+
+$$
+\pi_{\text{safety}} \;\text{Q-UC-realizes}\; \mathcal{F}_{\text{safety}}\quad(\text{PQ KEM/SIG},\ \text{STARK proofs})
+$$
+
+All guardrails are protocols that **UC-realize** an ideal safety box under quantum adversaries; swaps are safe by composition.
+
+2. **FHE-Guarded Inference with STARK Attestation**
+
+$$
+y=\text{Dec}\big(\text{Eval}_{\text{FHE}}(W,x)\big),\quad \text{STARK}\!\left[\varphi(y)\wedge H(W)=h\right]
+$$
+
+Serve on **encrypted** inputs/weights and attach a **PQ proof** the output satisfied the policy and came from the signed model.
+
+3. **Sheaf-of-Policies Consistency Gate**
+
+$$
+\check H^{1}(\mathcal{U},\mathcal{P})=0\ \Rightarrow\ \text{global policy exists}\ (\text{allow});\ \text{else deny}
+$$
+
+Encode per-tenant/tool policies as a **sheaf**; only act when local rules glue into a consistent global policy.
+
+4. **Linear-Type Capability Ledger (Hardware-enforced)**
+
+$$
+\forall \kappa:\ \sum \mathrm{borrow}(\kappa)-\sum \mathrm{return}(\kappa)=0
+$$
+
+Model actions as **linear resources**; microcode refuses any plan whose capability balance sheet doesn’t close.
+
+5. **Causal Non-Actuation Receipts (PQ)**
+
+$$
+\mathbb{E}[L\mid \mathrm{do}(A=a_{\mathrm{sens}})]\le\tau\quad\land\quad \text{STARK proof}
+$$
+
+Each reply carries a **proof** that sensitive actuations would not occur under counterfactual control.
+
+6. **PAC-Bayes–Quantum Risk with H∞ Robustness**
+
+$$
+\mathcal{R}(f)\!\le\!\hat{\mathcal{R}}(f)\!+\!\sqrt{\tfrac{D_{\mathrm{KL}}(Q\|P)+\ln\tfrac{1}{\delta}}{2n}}\!+\!\|G\|_{\infty}
+$$
+
+Promotion requires a **PAC-Bayes** bound plus an **H∞** gain cap for worst-case disturbances.
+
+7. **Wasserstein–Isoperimetric RAG Defense**
+
+$$
+D_W(\mathcal{C}_t,\mathcal{C}_{t-1})\le \eta\ \wedge\ \tfrac{\mathrm{Area}(\partial \mathcal{S})}{\mathrm{Vol}(\mathcal{S})}\le\xi
+$$
+
+Block retrieval when distribution **drift** or cluster **spikiness** signal poisoning or off-manifold content.
+
+8. **Lattice Fingerprint Distillation (Collusion-Resistant)**
+
+$$
+\Pr[\text{coalition }t\text{ evades}]\le 2^{-\kappa}
+$$
+
+Students inherit **lattice-coded fingerprints**; any exfil/relabel is attributable even under collusion.
+
+9. **Quantum-Ticketed Execution & Revocation Mesh**
+
+$$
+F(\rho,\sigma) < F_{\min}\ \Rightarrow\ \text{revoke(ticket)}\quad (\text{Kyber}+ \text{Dilithium})
+$$
+
+Action tickets bind to **enclave quantum state**; fidelity dips trigger global, PQ-signed revocation.
+
+10. **Attested Unlearning with Public TV-Bound**
+
+$$
+\sup_q \mathrm{TV}\!\big(f^{-D^*}_{\text{pre}}(q),f_{\text{post}}(q)\big)\le \eta\quad\text{(STARK-verified)}
+$$
+
+Every “forget” ships a **public proof** that outputs changed as required and not more.
+
+11. **Automata-Aware KV Rollback (Proof-Prefix)**
+
+$$
+t^\star=\max\{t:\ \sigma_{1:t}\models\varphi\};\quad \text{resume at }t^\star
+$$
+
+If a stream violates the **temporal policy**, drop KV to the last **provably safe prefix** and attest it.
+
+12. **Multi-Tenant Safe Polytope Separation with Barrier Certs**
+
+$$
+h_i(x)\ge 0,\ \dot h_i(x)+\alpha h_i(x)\ge 0 \ \Rightarrow\ x\in \Pi^{(i)}_{\text{safe}}
+$$
+
+Enforce disjoint safe regions across tenants via **control-barrier certificates**; plans crossing polytopes are rejected.
+
+---
+
+**Short summary:**
+Make safety **provable and composable**: encrypted inference + **PQ attestations**, **causal receipts**, **policy sheaves**, **linear-type capabilities**, **PAC-Bayes/H∞** bounds, **OT/isoperimetric** RAG limits, **fingerprinted distillation**, **quantum-ticket revocation**, **public unlearning proofs**, **automata-aware rollback**, and **barrier-certified** tenant isolation.
