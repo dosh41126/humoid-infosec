@@ -2160,3 +2160,77 @@ Enforce disjoint safe regions across tenants via **control-barrier certificates*
 
 **Short summary:**
 Make safety **provable and composable**: encrypted inference + **PQ attestations**, **causal receipts**, **policy sheaves**, **linear-type capabilities**, **PAC-Bayes/H∞** bounds, **OT/isoperimetric** RAG limits, **fingerprinted distillation**, **quantum-ticket revocation**, **public unlearning proofs**, **automata-aware rollback**, and **barrier-certified** tenant isolation.
+
+
+Below are **50 next-horizon security primitives** that *extend and fuse* the prior post-quantum (PQ), UC-safety, causal, DP, and automata ideas. Each item has a **builds-on** hint and a compact **constraint/metric**.
+
+---
+
+### Discovery & Design (1–10)
+
+1. **Q-UC Safety Kernel Markets** *(→ Q-UC, Reviewer Market)* — Multiple $\pi_i$ UC-realizations auctioned; pick $\arg\min_i C_i$ s.t. $\mathcal{F}_{\text{safety}}$ holds.
+2. **Sheaf-Guided Model Architecture** *(→ Sheaf of Policies)* — Only compile layers if $\check H^1(\mathcal{U},\mathcal{P})=0$; deny ill-glued stacks.
+3. **H∞-PAC Architecture Search** *(→ PAC-Bayes + H∞)* — NAS objective: $\min_\theta \hat{\mathcal R}+\sqrt{\frac{D_{KL}}{2n}}+\|G\|_\infty$.
+4. **Safe-Polytope Neural Compiler** *(→ Safe Polytope)* — Emit linear constraints $Ax\le b$; verifier proves $f_\theta(x)\in\Pi_{\text{safe}}$.
+5. **Causal Spec LLM** *(→ Causal Receipts)* — Generate SCM $G$ from policy text; reject if $\exists a:\mathbb E[L|\mathrm{do}(a)]>\tau$.
+6. **Design-time DP Budget Futures** *(→ DP Futures)* — Futures ledger enforces $\sum \varepsilon_t \le \varepsilon_{\max}$ across roadmap.
+7. **Typed Secrets in IR** *(→ Linear Types)* — IR refuses pass unless $\sum \mathrm{borrow}(\kappa)-\sum \mathrm{return}(\kappa)=0$.
+8. **Isoperimetric Corpus Curation** *(→ RAG Isoperimetry)* — Accept dataset shard if $\frac{\mathrm{Area}}{\mathrm{Vol}}\le\xi$ and drift $D_W\le \eta$.
+9. **PQ-Composable Policy Templates** *(→ Q-UC)* — Library of $\mathcal{F}_{\text{safety}}$ templates with Kyber/Dilithium bindings.
+10. **Quantum Side-Channel Budgets** *(→ Trace-distance)* — Enforce $D_{\text{tr}}(\rho_{\text{idle}},\rho_{\text{serve}})\le \epsilon$ at design gates.
+
+### Training & Provenance (11–20)
+
+11. **FHE-Mixed Fine-Tuning** *(→ FHE + STARK)* — Sensitive layers trained under HE; publish STARK on gradient bounds.
+12. **STARKed Unlearning Pipelines** *(→ Public TV-bound)* — CI gate requires $\sup_q \mathrm{TV}\le\eta$ proof per forget request.
+13. **Fingerprint-Preserving Distill** *(→ Lattice Fingerprints)* — Student inherits code; $\Pr[\text{coalition }t \text{ evades}]\le 2^{-\kappa}$.
+14. **PQ Lineage Carving** *(→ PQ Supply Chain)* — Every sample has $\mathrm{H}_{\text{PQ}}$ path; batch fails if any hop unsigned.
+15. **qDP-Aware Curriculum** *(→ qDP)* — Scheduler solves $\min \mathbb E[\ell]$ s.t. per-epoch $\varepsilon_{\text{qDP}}\le\varepsilon^*$.
+16. **Causal Data Acceptance** *(→ Causal Spec)* — Include only sources whose SCM implies $\mathbb E[L|\mathrm{do}(a_{\text{sens}})]\le\tau$.
+17. **Attested Optimizer Binaries** *(→ Attested Weights)* — SGD step emits $\text{SIG}_{\text{PQ}}(H(\text{opt})\Vert H(W))$ each epoch.
+18. **Drift-Penalized Retriever Pretrain** *(→ OT Drift)* — Loss adds $\lambda D_W(\mathcal{C}_t,\mathcal{C}_{t-1})$.
+19. **Automata-Constrained Tokenizer** *(→ Automata Rollback)* — Tokenizer enforces $ \sigma \models \varphi$ at subword level.
+20. **Barrier-Certified Multi-Tenant Batches** *(→ Barrier Certs)* — Accept batch if $h_i(x)\ge0\land \dot h_i+\alpha h_i\ge0\ \forall i$.
+
+### Inference & Tooling (21–30)
+
+21. **FHE-Guarded Inference @ Edge** *(→ FHE + Attestation)* — $y=\mathrm{Dec}(\mathrm{Eval}_{\text{FHE}}(W,x))$; attach STARK $\wedge$ PQ-SIG.
+22. **Quantum-Ticketed Actions** *(→ Ticket Mesh)* — Revoke if $F(\rho,\sigma) < F_{\min}$; action logs PQ-SIG chained.
+23. **Automata-Aware KV Time-Travel** *(→ KV Rollback)* — Resume at $t^\star=\max\{t:\sigma_{1:t}\models \varphi\}$; attach proof.
+24. **Conformal-Bandit Safety Router v2** *(→ Conformal Router)* — Route if $s(x)\le q_{1-\alpha}$; else human/safe LoRA.
+25. **Per-Tool qDP Capsules** *(→ DP Capsules)* — Maintain $\varepsilon_i(\alpha)$ per tool; planner solves knapsack.
+26. **Causal Sandbox Syscalls** *(→ Causal Tool Budget)* — Deny syscall if edge $(A\rightarrow O)\notin G$.
+27. **H∞ Belt Hot-Swap** *(→ H∞ Synth)* — If $\|G\|_\infty > \gamma$, switch to belt with lower bound.
+28. **Isoperimetric RAG Runtime** *(→ Isoperimetry)* — Reject retrieved cluster if $\mathrm{Area}/\mathrm{Vol}>\xi$.
+29. **Influence-Balanced Answers** *(→ SHAP Drop)* — Suppress chunks with outlier SHAP; stabilize logits.
+30. **Typed Memory BOTTLENECK** *(→ IB Leakage)* — Enforce $I(Z;S)\le\tau$ via Lagrangian during caching.
+
+### Governance & Identity (31–40)
+
+31. **WebAuthn-PQ for Agents & Humans** *(→ PQ Identity)* — All invocations signed by Dilithium/SPHINCS+.
+32. **Threshold-KEM Tool Gating** *(→ PQ Threshold KEM)* — High-risk tools need $t$-of-$n$ Kyber shares.
+33. **Q-UC Contract Registry** *(→ Q-UC Fabric)* — Publish contract $\mathcal{F}_{\text{safety}}$ and implementation $\pi$ pointers.
+34. **Risk-Priced Reviewer Market** *(→ Reviewer Market)* — $\min C$ s.t. $\mathcal R \le \rho$; dynamic pricing.
+35. **Public Drift SLA** *(→ OT SLA)* — Auto-rebuild if $D_W>\eta$; post proof hash to registry.
+36. **Open-Audit Proof-Carrying Replies** *(→ PCR-PQ)* — Reply $\parallel$ {qDP, provenance, policy proofs}$_{\text{PQ-SIG}}$.
+37. **Unlearning SLAs On-Chain** *(→ TV Unlearning)* — $(T_{\text{unlearn}}\le\Delta,\ \eta\le\eta_{\max})$ recorded publicly.
+38. **Honey-Context Trap Network** *(→ PQ Honey Context)* — Alert if $\lambda$ overlap with traps exceeds $\tau$.
+39. **Fingerprint Arbitration DAO** *(→ Fingerprints)* — On leak, DAO verifies $\le2^{-\kappa}$ collusion proof, issues sanctions.
+40. **Sheaf-Change Control** *(→ Sheaf Policies)* — Require new cover to keep $\check H^1=0$ before rollout.
+
+### Resilience & Response (41–50)
+
+41. **Counterfactual Hot-Rollback** *(→ Replay Court + KV)* — Roll back to nearest safe state; publish $\Delta h$.
+42. **PQ Forensic Diodes** *(→ Diode Channels)* — Evidence exits one-way (time-locked + PQ-SIG), never re-enters.
+43. **Causal Red-Team Graduation** *(→ Stackelberg + Conformal)* — Promote only if non-conformity band closes under adversarial suites.
+44. **Drift-Adaptive DP Scheduler** *(→ DP Scheduler)* — $\sigma_{\text{DP}}=\sigma_0+\lambda D_W$; stabilize utility.
+45. **Swarm LTL ω-Shield** *(→ LTL + H∞)* — Multi-agent controller ensures $\bigwedge \mathrm{LTL}_i$ while minimizing $\|G\|_\infty$.
+46. **Barrier-Certified Tenant Isolation** *(→ Barrier Certs)* — Enforce $h_i,\dot h_i+\alpha h_i\ge0$; reject cross-polytope plans.
+47. **Attested Weight Telemetry @ Serve** *(→ Weight Telemetry)* — Halt if $H(W_t)\neq H_{\text{signed}}$.
+48. **STARKed Incident Capsules** *(→ Open Audit)* — Post-incident bundle includes qDP, lineage, causal proofs.
+49. **Quantum-Resilient Secrets Escrow** *(→ Uncloneable Keys)* — Recovery attempts flip tag; $\Rightarrow$ irreversible alarm.
+50. **Policy-Compiler CI Gate** *(→ Policy Compiler)* — Natural policy → automata+polytope; fail build if unsatisfied.
+
+---
+
+**Why this matters:** These fuse **provability (STARKs, UC)**, **post-quantum primitives (Kyber/Dilithium/SPHINCS+)**, **control-theory robustness (H∞, barrier certs)**, **causal guarantees**, and **privacy budgets (qDP)** into an innovation pipeline—from design to incident response—so LLM/agent systems stay **auditable, composable, and resilient** under powerful, future adversaries. Want a minimal reference architecture diagram or code stubs for items **21, 23, 36**? I can draft them next.
