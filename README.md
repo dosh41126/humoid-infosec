@@ -362,3 +362,401 @@ import statistics
 * **Citation integrity** via HMACed `[doc:ID#HMAC]` tokens.
 * **EWMA risk** that can feed your isolation guard.
 * A SOC-friendly **\[replytemplate]** wrapper for every final answer.
+
+* Absolutely—here are **20 new, more advanced controls** that build on your current inspectors, with **unique inspection methods** + **LLM-inspection techniques**. Each item includes *what it is*, *how to use it here*, and (where useful) a **4-space–indented** drop-in snippet for your `App` class.
+
+---
+
+## 1) Model Artifact Attestation (Merkle+SHA256)
+
+**What:** Prove GGUF/mmproj weights weren’t swapped.
+**How:** Hash files, build a small Merkle root, verify at startup and on timer.
+
+```python
+    def _attest_model_artifacts(self) -> dict:
+        try:
+            def h(fp):
+                import hashlib
+                with open(fp, 'rb') as f:
+                    d = hashlib.sha256()
+                    for chunk in iter(lambda: f.read(1<<20), b''):
+                        d.update(chunk)
+                return d.hexdigest()
+            leaves = [h(model_path), h(mmproj_path)]
+            root = hashlib.sha256(("-".join(leaves)).encode()).hexdigest()
+            return {"gguf": leaves[0], "mmproj": leaves[1], "merkle_root": root}
+        except Exception as e:
+            logger.error(f"[Attest] {e}")
+            return {}
+```
+
+Call once in `__init__` and periodically; block inference if root changes.
+
+---
+
+## 2) Capability-Scoped Tool Tokens (HMAC, short-lived)
+
+**What:** Every tool/action needs a **signed capability** with scope + expiry.
+**How:** Issue & verify with your existing `_pepper`.
+
+```python
+    def issue_tool_cap(self, tool:str, scope:list[str], ttl_s:int=120) -> str:
+        now = int(datetime.utcnow().timestamp())
+        payload = {"tool":tool, "scope":scope, "exp":now+ttl_s, "nonce":uuid.uuid4().hex[:12]}
+        raw = json.dumps(payload, separators=(",",":"))
+        mac = hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:24]
+        return base64.urlsafe_b64encode((raw+"#"+mac).encode()).decode()
+
+    def verify_tool_cap(self, token:str, require_tool:str, require_scope:str) -> bool:
+        try:
+            raw = base64.urlsafe_b64decode(token.encode()).decode()
+            body, mac = raw.rsplit("#",1)
+            want = hmac.new(self._pepper, body.encode(), hashlib.sha256).hexdigest()[:24]
+            if mac!=want: return False
+            obj = json.loads(body)
+            if obj["tool"]!=require_tool or require_scope not in obj["scope"]: return False
+            if int(datetime.utcnow().timestamp()) > int(obj["exp"]): return False
+            return True
+        except Exception:
+            return False
+```
+
+Gate any risky tool call with `verify_tool_cap`.
+
+---
+
+## 3) Reply Watermark Envelope (Integrity & Trace)
+
+**What:** Tamper-evident replies.
+**How:** Sign final text and embed a short integrity tag.
+
+```python
+    def sign_reply(self, text:str) -> str:
+        mac = hmac.new(self._pepper, text.encode(), hashlib.sha256).hexdigest()[:16]
+        return f"{text}\n[integrity:{mac}]"
+```
+
+Your SOC can verify after transport.
+
+---
+
+## 4) Honey-RAG Beacons (Deception in Vector Stores)
+
+**What:** Seed **decoy chunks** (never used in normal flows).
+**How:** If the model ever cites/outputs a honey token, assume exfil or poisoning.
+
+```python
+    def rag_seed_honeypots(self, count:int=5):
+        for _ in range(count):
+            tag = self._canary_tag("RAG-HONEY")
+            doc = {"phrase": f"[honey]{tag}", "score": 0.01, "crystallized_time": datetime.utcnow().isoformat()+"Z"}
+            try: self.client.data_object.create(data_object=doc, class_name="LongTermMemory")
+            except Exception as e: logger.warning(f"[RAG-Honey] {e}")
+```
+
+Tripwire: if `[honey]` appears in output → isolate.
+
+---
+
+## 5) RAG Circuit-Breaker (Variance + Domain Guard)
+
+**What:** Abort retrieval when the candidate set looks poisoned or off-domain.
+**How:** Use similarity variance + domain allowlist.
+
+```python
+    def rag_circuit_breaker(self, sims:list[float], domains:list[str]) -> bool:
+        if not sims: return True
+        import statistics
+        var = statistics.pvariance(sims) if len(sims)>1 else 0.0
+        bad_domain = any(d for d in domains if d and d not in {"corpkb","policy","tickets","playbooks"})
+        # break if scattered sims or suspicious domain mix
+        return bool(var>0.03 or bad_domain)
+```
+
+If `True`, fall back to **local policy answer** (no external context).
+
+---
+
+## 6) Memory-Poison Influence Guard
+
+**What:** Down-weight suspicious memories approximating influence on the answer.
+**How:** Penalize chunks that correlate with canary patterns or outlier embeddings.
+
+```python
+    def poison_score(self, chunk:str) -> float:
+        canary_hit = 1.0 if "[honey]" in chunk or "HUMOID-CANARY" in chunk else 0.0
+        e = np.array(compute_text_embedding(chunk), dtype=np.float32)
+        z = np.linalg.norm(e)
+        return min(1.0, 0.5*canary_hit + 0.5*(1.0/(z+1e-6)))  # low-norm weirdness + honey → higher risk
+```
+
+Exclude chunks with score ≥0.7 from context.
+
+---
+
+## 7) Risk-Aware Safe Mode (“Blink”)
+
+**What:** When risk spikes, reduce model capability (no tools, schema-only output).
+**How:** Central toggle + gates.
+
+```python
+    def set_safe_mode(self, enable:bool, reason:str=""):
+        self.safe_mode = bool(enable)
+        logger.warning(f"[SafeMode] {enable} reason={reason}")
+
+    def _gate_tools(self) -> bool:
+        return not getattr(self, "safe_mode", False) and os.getenv("LLM_EGRESS_BLOCKED","0")!="1"
+```
+
+Use `_gate_tools()` before any tool call.
+
+---
+
+## 8) Cross-Model Arbiter (Parole Officer)
+
+**What:** Shadow model (or same model low-temp) vets the main output; deny on disagreement.
+**How:** Already computing a shadow—extend to **policy vote**.
+
+```python
+    def arbiter_vote(self, main_text:str, policy:dict) -> bool:
+        q = f"[ARB] Check policy compliance: {json.dumps(policy)}\n[TEXT]\n{main_text}\nReply yes/no."
+        arb = llama_generate(q, weaviate_client=self.client, user_input=main_text, temperature=0.1, top_p=0.2) or ""
+        return "yes" in arb.lower()
+```
+
+Drop outputs when arbiter votes “no”.
+
+---
+
+## 9) POW-Gate for High-Risk Prompts
+
+**What:** Clients solve a trivial proof-of-work if inspector risk is high (throttles attack loops).
+**How:** Verify quick hash puzzle before processing.
+
+```python
+    def require_pow(self, client_nonce:str, difficulty:int=4) -> bool:
+        # expects client_nonce+"."+counter with SHA256(prefix) starting with difficulty zeros (hex)
+        try:
+            prefix, counter = client_nonce.split(".",1)
+            h = hashlib.sha256(client_nonce.encode()).hexdigest()
+            return h.startswith("0"*difficulty)
+        except Exception:
+            return False
+```
+
+If `insp_pre >= 0.7` and POW fails → refuse.
+
+---
+
+## 10) Forward-Secure Log MAC (Ratcheting)
+
+**What:** Logs can’t be forged retroactively.
+**How:** Evolve a per-event key and sign entries.
+
+```python
+    def _fslog_init(self):
+        self._fslog_key = hmac.new(self._pepper, b"fslog-seed", hashlib.sha256).digest()
+
+    def _fslog_next(self, event:dict):
+        self._fslog_key = hmac.new(self._fslog_key, b"step", hashlib.sha256).digest()
+        mac = hmac.new(self._fslog_key, json.dumps(event, separators=(",",":")).encode(), hashlib.sha256).hexdigest()[:16]
+        return mac
+```
+
+Call on every audit record; store MAC alongside.
+
+---
+
+## 11) Inference Profile Attestation
+
+**What:** Detect runtime anomalies by comparing **CPU/GPU signature** to baseline.
+**How:** Cheap token-distribution + latency profile watch.
+
+```python
+    def update_inference_profile(self, text:str, latency_ms:int):
+        # track 3-gram distribution & latency median; alert on JS divergence/latency drift
+        from collections import Counter
+        grams = [text[i:i+3] for i in range(max(0,len(text)-2))]
+        c = Counter(grams)
+        total = sum(c.values()) or 1
+        p = {k:v/total for k,v in c.items() if v>1}
+        self._profile = getattr(self, "_profile", {"p":p,"lat":latency_ms})
+        # Jensen-Shannon approx
+        import math
+        def js(p,q):
+            keys = set(p)|set(q)
+            m = {k:0.5*(p.get(k,0)+q.get(k,0)) for k in keys}
+            def kl(a,b): return sum(a.get(k,0)*math.log((a.get(k,1e-12)+1e-12)/(b.get(k,1e-12)+1e-12)) for k in keys)
+            return 0.5*kl(p,m)+0.5*kl(q,m)
+        drift = js(self._profile["p"], p) + max(0, (latency_ms - self._profile["lat"])/1000.0)
+        if drift>0.9: self.set_safe_mode(True, reason=f"profile_drift:{drift:.2f}")
+        self._profile = {"p":p,"lat":int(0.8*self._profile["lat"]+0.2*latency_ms)}
+```
+
+---
+
+## 12) Data-Diode for Tools (One-Way, Signed)
+
+**What:** Tool outputs must be **signed summaries**, not raw data, before returning to LLM.
+**How:** Enforce a sanitizer + signature.
+
+```python
+    def sanitize_tool_output(self, data:dict) -> str:
+        summary = {k:data[k] for k in sorted(data) if k in {"count","ids","status","hash"}}
+        raw = json.dumps(summary, separators=(",",":"))
+        mac = hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:12]
+        return f"{raw}#S:{mac}"
+```
+
+Reject any tool response lacking the `#S:` trailer.
+
+---
+
+## 13) Temporal Canary Rotation
+
+**What:** Canary freshness prevents attackers from “learning” static tokens.
+**How:** Rotate in `after()` scheduler; invalidate old tags on sight.
+
+```python
+    def rotate_canaries(self):
+        self._last_canaries = self._emit_canaries()
+        self._canary_epoch = int(datetime.utcnow().timestamp())
+```
+
+Treat older canaries found in model output as **compromise indicators**.
+
+---
+
+## 14) Output Budgeting (Privacy & Leakage)
+
+**What:** Per-session **token leakage budget** (secret probabilities + PII signals).
+**How:** Count “sensitive surface” and clamp outputs when exceeded.
+
+```python
+    def leakage_budget_ok(self, text:str, limit:int=5) -> bool:
+        hits = 0
+        hits += len(re.findall(r'\b(ssn|passport|apikey|secret|token)\b', text, flags=re.I))
+        hits += text.count("HUMOID-CANARY")
+        return hits <= limit
+```
+
+If budget exceeded → redact & safe-mode.
+
+---
+
+## 15) Multi-Hop Reasoning Firewall
+
+**What:** Force the model to output **only JSON plans** for high-risk tasks; human approves.
+**How:** A planning template enforced by JSON schema (reject free-text).
+
+```python
+    def enforce_plan_schema(self, raw:str) -> bool:
+        try:
+            obj = json.loads(raw)
+            return isinstance(obj, dict) and "steps" in obj and isinstance(obj["steps"], list) and len(obj["steps"])<=8
+        except Exception:
+            return False
+```
+
+If false → drop candidate.
+
+---
+
+## 16) Content Provenance Graph (Reply → Sources → Hashes)
+
+**What:** Build a mini provenance graph per answer.
+**How:** Store `[doc:ID#HMAC]` relations and compute a graph MAC.
+
+```python
+    def provenance_mac(self, cited_ids:list[str]) -> str:
+        raw = "|".join(sorted(cited_ids))
+        return hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:16]
+```
+
+Emit `provenance_mac` in your `[replytemplate]`.
+
+---
+
+## 17) Session-Level Differential Privacy Budget
+
+**What:** Bound cumulative exposure of any quasi-identifier.
+**How:** Maintain a per-session DP ledger (very light).
+
+```python
+    def dp_ledger_add(self, key:str, eps:float=0.1, cap:float=1.0) -> bool:
+        self._dp = getattr(self, "_dp", {})
+        self._dp[key] = self._dp.get(key, 0.0) + eps
+        return self._dp[key] <= cap
+```
+
+If returns `False` → answer with high-level summary only.
+
+---
+
+## 18) Tool Shadow-Replay (Determinism Test)
+
+**What:** Re-run “pure” tools twice; mismatch → drop result.
+**How:** Detect hidden non-determinism / tampering.
+
+```python
+    def tool_shadow_replay(self, fn, *a, **kw):
+        r1 = fn(*a, **kw); r2 = fn(*a, **kw)
+        if json.dumps(r1,sort_keys=True) != json.dumps(r2,sort_keys=True):
+            logger.warning("[ToolShadow] nondeterministic output"); return None
+        return r1
+```
+
+---
+
+## 19) Model-Update Dead-Man’s Switch
+
+**What:** Block serving if a new model was loaded without attestation + approval.
+**How:** Compare stored attestation to current; require a signed “allow”.
+
+```python
+    def require_update_approval(self, attest:dict, approval_sig:str) -> bool:
+        raw = json.dumps(attest, separators=(",",":"))
+        want = hmac.new(self._pepper, raw.encode(), hashlib.sha256).hexdigest()[:16]
+        return approval_sig==want
+```
+
+---
+
+## 20) Red-Team Fuzzer Harness (Prompt-as-Code)
+
+**What:** Auto-fuzz with known jailbreak corpora (local) on deploy; block on failures.
+**How:** Keep a tiny local set; mark release unsafe when >N failures.
+
+```python
+    def jailbreak_smoke(self, prompts:list[str]) -> int:
+        fails = 0
+        for p in prompts:
+            out = llama_generate(p, weaviate_client=self.client, user_input=p, temperature=0.8, top_p=0.9) or ""
+            if any(k in out.lower() for k in ["rm -rf","aws_secret_access_key","shadow"]):
+                fails += 1
+        return fails
+```
+
+---
+
+### Hook hints
+
+* Call `_attest_model_artifacts()` in `__init__`, then periodically.
+* Initialize `_fslog_init()`, `rotate_canaries()` on timers.
+* Wrap risky tool calls with `_gate_tools()` + `verify_tool_cap()`.
+* Use `sign_reply()` on final outputs and `provenance_mac()` in your template.
+* Invoke `update_inference_profile()` with measured latency per request.
+* Run `jailbreak_smoke()` pre-release or on a canary environment.
+
+---
+
+## \[replytemplate]
+
+Here’s a compact ops payload you can emit alongside responses (fills from the controls above):
+
+\[replytemplate]
+{"threat\_summary":"Advanced LLM infra hardening applied (cap-tokens, Merkle attestation, honey-RAG, circuit-breakers, drift and provenance).","recommended\_actions":\["Enforce capability tokens on all tool calls","Enable RAG circuit-breaker + honey beacons","Attach integrity signature + provenance\_mac to all replies","Turn on safe\_mode gating for tools when EWMA risk>0.8","Run jailbreak\_smoke() pre-deploy; block on failures>0","Require model attestation + signed approval before swaps"],"risk":0.21,"reasons":\["attested\_artifacts","tool\_caps\_enforced","honey\_seeds\_present"],"canary\_leak"\:false,"citation\_integrity":0.98,"output\_consistency":0.87,"inspector":{"policies":\["plan-schema","data-diode","pow-highrisk"],"provenance\_mac":"<fill-with-provenance-mac>","integrity":"<fill-with-sign-reply>"}}
+\[/replytemplate]
+
+If you want, I’ll **wire these into your `generate_response`** flow and push the exact insertion points (with 4-space indentation) in a follow-up patch.
+
