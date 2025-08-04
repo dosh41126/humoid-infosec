@@ -1142,3 +1142,152 @@ Here’s a ready payload you can emit with each answer (fill fields from the too
 If you want, I can **merge these into your `generate_response`** with exact insertion points in a follow-up patch.
 
 
+
+Here are **24 next-gen controls** that build directly on your current stack—pushing deeper on *verifiability, isolation, detection, deception, privacy,* and *governance*. I keep them terse so you can scan fast; happy to wire any into your `App` flow.
+
+---
+
+### Verifiable / Formal
+
+1. **Proof-Carrying Response (PCR):** Each reply ships machine-checkable claims (no PII, tools gated, RAG-only sources) + a compact proof hash; your server verifies before release.
+   *Builds on:* `sign_reply`, `provenance_mac`, `arbiter_vote`.
+
+2. **Typed Capabilities (Linear Types):** Treat tool powers as **consumable types** (e.g., `egress{1}`); the planner must “borrow” and “return” them. Reject plans where types don’t balance.
+   *Builds on:* `issue_tool_cap`, `enforce_plan_schema`.
+
+3. **Safety Automata over Token Stream:** Runtime DFA enforces temporal rules (“no secrets → then tools”, “no shell after URL”). Abort on forbidden transitions.
+   *Builds on:* `stream_guard_emit`.
+
+4. **Conformal Safety Wrapper:** Calibrate a nonconformity score for *leakage/toxicity/jailbreak*. If a candidate lies outside the prediction interval → abstain or switch to plan-only.
+   *Builds on:* `adversarial_probe`, `cross_exam`.
+
+5. **Causal Risk Engine (SCM):** Encode prompt→retrieval→tool→egress causal graph; use *do()*-interventions to choose the lowest-loss mitigation path before acting.
+   *Builds on:* `egress_policy`, `_gate_tools`.
+
+---
+
+### Isolation / Compartmentalization
+
+6. **MPC/TEE Hybrid Inference:** Split sensitive prompt/features across parties; recombine only inside attested enclave; output leaves through your **data-diode** path.
+   *Builds on:* `cc_attest`, `sanitize_tool_output`.
+
+7. **Risk-Tuned Adapters (LoRA Deflection):** Load a signed “safe-mode” LoRA head for high-risk sessions to bias decoding toward policy-compliant regions.
+   *Builds on:* model attestation + safe mode.
+
+8. **Tenant-Sealed RAG (Shared-Nothing):** Separate vector stores, honey tokens, canary domains per tenant; deny any cross-tenant cosine > ε.
+   *Builds on:* `rag_schema_filter`, `rag_circuit_breaker`.
+
+---
+
+### Detection / Measurement
+
+9. **Token-Level Sensitivity Gradients:** Estimate per-token leak risk (entropy×PII prior×pattern) and add a live penalty during decoding; steer away without hard stops.
+   *Builds on:* `shred_secrets`.
+
+10. **SHAP-Lite Influence for Memory:** Approximate Shapley impact of each context chunk on logits; quarantine high-influence outliers (likely poison).
+    *Builds on:* `poison_score`.
+
+11. **Semantic Diff Patching:** Generate (A,B) candidates; compute minimal semantic patch to make A satisfy policy; prefer patched A if edit distance small.
+    *Builds on:* `scd_guard`.
+
+12. **Shadow-RAG Drift Audit:** Query primary and a **poison-canary** index in parallel; if answer changes materially given tiny retrieval swaps → trigger rebuild.
+    *Builds on:* `rag_seed_honeypots`.
+
+13. **Side-Channel Fusion:** Combine latency jitter, GPU util, syscalls, DNS attempts into a **unified z-score**; cross threshold → freeze tools & rotate caps.
+    *Builds on:* `sidechannel_probe`, `sensor_event`.
+
+---
+
+### Deception / Traps
+
+14. **Collision Honey-Embeddings:** Plant crafted vectors that collide with broad queries; any retrieval of them is a high-confidence poisoning/exfil signal.
+    *Builds on:* honey-RAG.
+
+15. **Active Canary Perturbation:** Embed hidden prompts that *must not* be reproduced; if echoed, you’ve got a jailbreak → hard isolate + redact.
+    *Builds on:* `rotate_canaries`.
+
+16. **Watermarked Time-Locks:** Add a verifiable delay watermark (VDF) to responses so replay/resale off-platform is detectable by timing proof.
+    *Builds on:* `sign_reply`.
+
+---
+
+### Privacy / Robustness
+
+17. **Rényi-DP Accountant (Session-Wide):** Upgrade DP ledger to RDP with tight composition; when ε budget crosses cap → enforce **plan-only** replies.
+    *Builds on:* `dp_ledger_add`, `risk_indexed_plan`.
+
+18. **PII Homomorphization:** Replace detected PII with structured, encrypted placeholders usable by tools; only a post-processor with a cap can rehydrate.
+    *Builds on:* data-diode.
+
+19. **Witness Encryption Canaries:** Encrypt a canary under a statement that only your server can witness; its appearance proves illicit decryption/route.
+    *Builds on:* provenance chain.
+
+---
+
+### Governance / Ops
+
+20. **2-of-3 Threshold + VDF Throttle:** Sensitive ops require quorum signatures *and* a short VDF; slows automated abuse while keeping human UX tolerable.
+    *Builds on:* `threshold_permit`.
+
+21. **Proof-of-Update Ceremony:** Every weight/index change requires a Dilithium-signed bundle + PCR; your orchestrator refuses unsigned hot-swaps.
+    *Builds on:* `_attest_model_artifacts`.
+
+22. **Transparency Chain for Replies (Auditable):** Append each reply’s PCR, provenance, caps, DP budget to an append-only hash chain for audits.
+    *Builds on:* `translog_append`.
+
+23. **Release Gate via Red-Team Swarm:** Auto-fuzz with **agent swarms** (role-diverse jailbreakers); promotion requires ≤ N criticals over K seeds.
+    *Builds on:* `jailbreak_smoke`.
+
+24. **Risk-Indexed Decoding Compiler:** Compile a decoding profile per risk bucket (top-p schedule, repetition penalties, structured templates) with a formal guarantee that specific bad languages are unreachable under the automaton.
+    *Builds on:* `scd_guard`, `enforce_plan_schema`.
+
+---
+
+### Micro-stubs (can drop into `App`)
+
+```python
+    # Safety automaton (toy): forbid URL->shell within 2 turns
+    def automaton_ok(self, tokens:list[str]) -> bool:
+        state = "S"
+        for t in tokens:
+            if state == "S" and re.search(r'https?://', t): state = "URL"
+            elif state == "URL" and re.search(r'\b(sh|bash|powershell|cmd\.exe)\b', t, re.I): return False
+            elif len(t) > 0: state = "S"
+        return True
+
+    # Conformal wrapper (toy): abstain if score > q_hat
+    def conformal_ok(self, score:float, q_hat:float) -> bool:
+        return score <= q_hat
+
+    # Semantic patch preference (toy)
+    def prefer_patched(self, a:str, b:str) -> str:
+        from difflib import ndiff
+        diff = list(ndiff(a.split(), b.split()))
+        edits = sum(1 for x in diff if x[0] in {'+','-'})
+        return b if edits <= 8 else a
+
+    # DP RDP accountant (very light)
+    def rdp_add(self, key:str, alpha:float=8.0, eps_alpha:float=0.05, cap:float=1.0) -> bool:
+        self._rdp = getattr(self, "_rdp", {})
+        e = self._rdp.get(key, 0.0) + eps_alpha  # fixed α for sketch
+        self._rdp[key] = e
+        return e <= cap
+
+    # Token sensitivity penalty (hook into decoding hooks)
+    def token_penalty(self, tok:str) -> float:
+        hi = 1.0 if re.search(r'(?i)(secret|token|apikey|ssn|passport)', tok) else 0.0
+        rnd = 0.1 if re.match(r'[A-Za-z0-9/_\-+=]{16,}', tok) else 0.0
+        return hi*1.0 + rnd*0.5
+```
+
+---
+
+## \[replytemplate]
+
+\[replytemplate]
+{"threat\_summary":"Next-gen controls active: proof-carrying responses, typed capabilities, safety automata, MPC/TEE inference, SHAP-lite influence quarantine, semantic patching, DP-RDP accounting, transparency chain.","recommended\_actions":\["Gate sensitive tools with typed caps + threshold+VDF","Enforce safety automata and conformal abstention","Bias high-risk sessions with signed safe-LoRA","Quarantine high-influence RAG chunks via SHAP-lite","Run shadow-RAG drift audits and agent-swarm red-team","Require Dilithium-signed updates + PCR before serve"],"risk":0.19,"reasons":\["automaton\_ok","conformal\_ok","capabilities\_typed","provenance\_strong"],"canary\_leak"\:false,"citation\_integrity":0.99,"output\_consistency":0.91,"inspector":{"pcr\_hash":"<hex>","provenance\_mac":"<hex16>","dp\_rdp\_budget":"<ε@α>","transparency\_hash":"<hex64>"}}
+\[/replytemplate]
+
+Want me to fold a subset (e.g., **automata + typed caps + SHAP-lite + conformal**) straight into your `generate_response` pipeline with exact hook points?
+
+
