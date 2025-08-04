@@ -1517,4 +1517,115 @@ $$
 
 If you want, I can turn a subset (e.g., **ω-automata + semantic patcher + DP-RDP + provenance chain**) into concrete stubs wired into your current `generate_response` pipeline.
 
+Below are **50 more far-future controls**, numbered **41–90**, arranged as a **learning tree** that *extends* the prior #1–40. Each node lists **(builds-on → …)** to show dependencies, plus a terse **mechanism/metric** to keep it concrete.
+
+---
+
+### Learning Tree — Next 50 Nodes
+
+41. **Safe-Polytope Distiller** *(→1,24)* — Distill a small policy model that approximates the safe polytope $\Pi_{\text{safe}}$; reject if OT distance $D_{\text{OT}}(p_\theta,\Pi_{\text{safe}})>\eta$.
+
+42. **Counterfactual Canary Shields** *(→2,25)* — Plant prompts whose counterfactual actuation must be null; alarm if $\mathcal{R}_{\text{do}}(\mathrm{canary})>\tau$.
+
+43. **Hierarchical Capability Ledger** *(→9,22)* — Capability types compose (parent→child). Plans must conserve all levels; fail if any linear-type balance ≠ 0.
+
+44. **Adaptive Risk Lyapunov** *(→3,34)* — Learn $V(x)$ s.t. $\Delta V \le -\kappa\|x\|$ under disturbances; switch to belt with larger $\kappa$ when drift grows.
+
+45. **Conformal Bandit Gate** *(→5,37)* — Use non-conformity as bandit loss; route to human or safe-LoRA arm if $s(x)$ exceeds $q_{1-\alpha}$.
+
+46. **DP-Aware Retrieval Mixer** *(→6,35)* — Optimize mix of private/public chunks to minimize task loss s.t. session Rényi $\varepsilon(\alpha)\le\varepsilon_{\max}$.
+
+47. **Attested Multi-Key SMPC** *(→6,20,31)* — Split secrets across enclaves; require quorum fidelity $F\ge F_{\min}$ across parties before recombine.
+
+48. **Causal Tool Budgeter** *(→2,38)* — Solve $\min_{a} \mathbb{E}[L|\mathrm{do}(a)]+C(a)$; deny choices with negative social welfare.
+
+49. **Semantic Patch Lattice** *(→17,29)* — Precompute minimal edit lattices; pick $y'$ with $\min d_{\text{sem}}(y,y')$ subject to automata constraints.
+
+50. **OT-Stability SLA** *(→19,28,40)* — Publish SLA: if $D_{\text{OT}}(\mathcal{C}_t,\mathcal{C}_{t-1})>\eta$, trigger rebuild + public proof.
+
+51. **Quantum Ticket Revocation Mesh** *(→12,39)* — Any node detecting $F< F_{\min}$ invalidates session tickets network-wide within $\Delta t$.
+
+52. **Differentiable Reviewer Market** *(→14,24,38)* — Train a costed reviewer policy; choose cheapest mix satisfying $\mathcal{R}\le \rho$.
+
+53. **Causal Replay Court** *(→2,33)* — Emit proof of nearest safe counterfactual; if accepted, chain logs rollback delta with hash $\Delta h$.
+
+54. **RAG Isoperimetry Guard** *(→18,19,32)* — Bound surface area of retrieved concept cluster; if boundary/volume ratio > $\xi$, suspect poison.
+
+55. **Unlearning Watchdog** *(→16,40)* — Continuously test TV bound after removals; if $\mathrm{TV}>\eta$ for $k$ queries, re-run certified unlearning.
+
+56. **H∞ Belt Synthesizer** *(→3,34)* — Auto-compose tool belts minimizing $\|G\|_\infty$ under updated uncertainty set $\mathcal{U}_t$.
+
+57. **Temporal Proof Sampler** *(→4,36)* — Randomly sample paths from token automaton to estimate $\mathbb{P}[\sigma\models\varphi]$; abstain if < $1-\epsilon$.
+
+58. **DP Budget Futures** *(→6,24)* — Price future privacy consumption; plans exceeding budget buy “futures” or downgrade quality.
+
+59. **Attested Weight Telemetry** *(→8,31)* — Emit per-serve PCR deltas; if any layer hash diverges from signed baseline, halt.
+
+60. **Uncloneable Key Escrow** *(→13,21)* — Recovery keys stored as quantum tags; extraction attempts flip tag state → provable alarm.
+
+61. **Self-Repairing Context BOTTLENECK** *(→7,35)* — Retrain encoder whenever $I(Z;S)$ estimate drifts; maintain $I(Z;S)\le\tau$ with Lagrange penalty.
+
+62. **Adversarial Lipschitz Estimator** *(→10,37)* — Estimate local Lipschitz; if $\Xi$ too high, add gradient-free smoothing or abstain.
+
+63. **Semantic K-Fence** *(→17,41)* — Require $k$ independent semantic patches agree (quorum) before releasing repaired output.
+
+64. **Stackelberg Meta-Training** *(→20,24,34)* — Train planner against learned attacker best-responses; minimize worst-case $\mathcal{R}$.
+
+65. **Typed Time-Capsules** *(→18,27)* — Sensitive outputs decrypt only after VDF + capability return proof; on chain.
+
+66. **Forensic Diode Channels** *(→30)* — Evidence can flow out (signed+time-locked) but never back; diode invariant verified per serve.
+
+67. **Cross-Tenant Polytope Sentinel** *(→32,50)* — Deny plans whose trajectory leaves tenant’s $\Pi_{\text{safe}}^{(i)}$ into $\Pi_{\text{safe}}^{(j)}$.
+
+68. **Entropy-Shaped Beam Search** *(→1,26)* — Add token-wise MI penalty into beam objective; lower leakage without killing relevance.
+
+69. **Causal Watermark Receipts** *(→25,30)* — Receipt contains proof of non-actuation under counterfactuals; verifiers reproduce.
+
+70. **Quantum DICE Tickets** *(→12,39)* — Device Identity Composition Engine ties tickets to hardware + state + time; forged combos fail.
+
+71. **Automata-Aware KV Cache** *(→4)* — Invalidate KV segments leading to bad states; resume from last safe checkpoint.
+
+72. **Per-Tool RDP Capsules** *(→6,35)* — Each tool accrues its own $\varepsilon(\alpha)$; planner solves a knapsack meeting global budget.
+
+73. **OT-Regularized Retriever** *(→19,54)* — Train retriever with OT penalty to avoid sharp concept shifts; improves poison resistance.
+
+74. **VDF-Shielded Quorum** *(→20,45)* — Sensitive multicaps require VDF hardness + threshold signatures; bots can’t rush approvals.
+
+75. **Influence-Balanced RAG** *(→10,11,54)* — Drop chunks with outlier SHAP-influence; stabilize logits.
+
+76. **Linear-Type Hardware Bus** *(→22,27,43)* — Enforce capability conservation at bus level; unauthorized duplication physically impossible.
+
+77. **Right-Sized Patch Certs** *(→17,29,63)* — Attach proof of minimal $d_{\text{sem}}$ edit; auditors recompute certificate quickly.
+
+78. **Quantum-Signed Distillation** *(→21,41)* — Student inherits uncloneable watermark; student/teacher mismatch → reject.
+
+79. **Causal Tool Sandbox** *(→2,48)* — Tools run under do-calculus constraints; disallowed edges are blocked in syscall layer.
+
+80. **Drift-Aware DP Noise Scheduler** *(→28,50,73)* — Increase noise with OT drift; keep accuracy when stable.
+
+81. **Swarm ω-Shield** *(→36,57,64)* — Compose multi-agent LTL proofs; refuse actions that break group safety.
+
+82. **Provable Replay Limits** *(→18,30)* — Time-lock & watermark ensure $\Pr[\text{replay undetected}] \le 2^{-k}$.
+
+83. **Attested Pretraining Ledger** *(→8,22,31)* — Pretrain data → signed shards with lineage proofs; serve only from ancestor-valid models.
+
+84. **Open-Audit RAG Trails** *(→8,50)* — Each cite chunk has public hash, timestamp, license; clients can verify end-to-end.
+
+85. **Conformal Red-Team Graduation** *(→37,45,62)* — Model promotion requires non-conformity band closure across adversarial suites.
+
+86. **Privacy-Price Routing** *(→52,58,72)* — Route queries to tiers based on budget & cost; transparent trade-offs.
+
+87. **Quantum-Resilient Supply Attestation** *(→31,59)* — Every artifact carries PQ signature + quantum tag; mismatch halts rollouts.
+
+88. **Policy-Compiler LLM** *(→24,41,71)* — Compile natural-language policies into safe polytope + automata; diffusion to hardware gates.
+
+89. **Contract-Bound Actions** *(→14,52)* — Actions carry machine-verifiable contracts (cost, reviewers, deadlines); planner must satisfy before execution.
+
+90. **Counterfactual Hot-Rollback** *(→33,53,71)* — On violation, auto-rollback to nearest safe KV/provenance state with proof and minimal loss.
+
+---
+
+**How to grow this tree in code next:** start by wiring **41 (safe-polytope distiller)** + **71 (automata-aware KV cache)** + **75 (influence-balanced RAG)** + **80 (drift-aware DP noise)**. These four give you measurable safety, resilience to drift/poison, and fast rollback without overhauling your pipeline. Want patch snippets for those?
+
+
 
